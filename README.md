@@ -19,7 +19,12 @@ Plug 'gaborvecsei/cryptoprice.nvim'
 
 ## Setup
 
-You should define which cryptos would you like to see.
+You'll need to setup what coins you would like to see and in which currency.
+
+- `base_currency`: Use `eur` or `usd`
+- `crypto_list`: This is a list with the id of the coin on CoinGecko
+    - Check the available ids here: [api.coingecko.com/v3/coins/list](https://api.coingecko.com/api/v3/coins/list)
+    - e.g. `["bitcoin", "ethereum"]`
 
 ### vimscript
 
