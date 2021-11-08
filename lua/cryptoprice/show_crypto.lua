@@ -92,6 +92,24 @@ local function close_window()
     Crypto_buf = nil
 end
 
+local function set_buffer_contents(buf, contents)
+    -- Helper function to set the contents of the window buffer
+    vim.api.nvim_buf_set_name(buf, "cryptoprice-menu")
+
+    -- TODO: offsetting the help message from the last "real" line - I am sure there is a better way to do this
+    -- Another call to vim.api.nvim_buf_set_lines did not work, there was no offset
+    if #contents < 9 then
+        -- While we don't fill the whole window, show the help at the bottom (last line)
+        for i=1,10-#contents-1 do contents[#contents+1] = "" end
+    end
+    contents[#contents+1] = "(Press 'q' to close this window, 'r' to refresh prices)"
+    vim.api.nvim_buf_set_lines(buf, 0, #contents, false, contents)
+
+    vim.api.nvim_buf_set_option(buf, "filetype", "cryptoprice")
+    vim.api.nvim_buf_set_option(buf, "buftype", "acwrite")
+    vim.api.nvim_buf_set_option(buf, "bufhidden", "delete")
+end
+
 local function create_price_data()
     -- Gather prices of the defined coins and create the messages which we will show on the created popup window
 
@@ -101,13 +119,24 @@ local function create_price_data()
     if req_status then
         local i = 1
         for k, v in pairs(prices) do
-            contents[i] = string.upper(k) .. " is " .. tostring(v) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
+            contents[i] = "- 1 " .. string.upper(k) .. " is " .. tostring(v) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
             i = i + 1
         end
     else
         contents[1] = "[ERROR] No prices found"
     end
     return contents
+end
+
+function M.refresh_prices()
+    -- Gather prices and then create the messages which will be displayed
+
+    if Crypto_win_id ~= nil and vim.api.nvim_win_is_valid(Crypto_win_id) then
+        local contents = create_price_data()
+        set_buffer_contents(Crypto_buf, contents)
+    else
+        print("Window does not exists, no price data will be shown")
+    end
 end
 
 function M.toggle_price_window()
@@ -117,34 +146,35 @@ function M.toggle_price_window()
         return
     end
 
-    local function set_buffer_contents(contents)
-        -- Helper function to set the contents of the window buffer
-        vim.api.nvim_buf_set_name(Crypto_buf, "cryptoprice-menu")
-        vim.api.nvim_buf_set_lines(Crypto_buf, 0, #contents, false, contents)
-        vim.api.nvim_buf_set_option(Crypto_buf, "filetype", "cryptoprice")
-        vim.api.nvim_buf_set_option(Crypto_buf, "buftype", "acwrite")
-        vim.api.nvim_buf_set_option(Crypto_buf, "bufhidden", "delete")
-    end
-
     -- Create the window, and assign the global variables, so we can use later
+    -- TODO: global variable to modify the width, height? (we should use that variable in the show_content fn as well
+    -- when adding the help line at the end
     local win_info = create_window()
     Crypto_win_id = win_info.win_id
     Crypto_buf = win_info.bufnr
 
     -- Check if the API is reachable
     if not is_api_reachable() then
-        set_buffer_contents({"[ERROR] the API is not reachable", "Check your internet connection"})
+        set_buffer_contents(Crypto_buf, {"[ERROR] the API is not reachable", "Check your internet connection"})
         return
     end
 
-    local contents = create_price_data()
-    set_buffer_contents(contents)
+    -- Show the current prices
+    M.refresh_prices()
 
+    -- Keymappings for the opened window
     vim.api.nvim_buf_set_keymap(
         Crypto_buf,
         "n",
         "q",
         ":lua require('cryptoprice.show_crypto').toggle_price_window()<CR>",
+        { silent = true }
+    )
+    vim.api.nvim_buf_set_keymap(
+        Crypto_buf,
+        "n",
+        "r",
+        ":lua require('cryptoprice.show_crypto').refresh_prices()<CR>",
         { silent = true }
     )
 end

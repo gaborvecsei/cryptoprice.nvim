@@ -18,7 +18,7 @@ function M.setup(opts)
 		end
 	end
 
-    set_default("crypto_list", {"bitcoin", "ethereum", "tezos"})
+    set_default("crypto_list", {"bitcoin", "ethereum", "tezos", "dogecoin"})
     set_default("base_currency", "usd")
 end
 
