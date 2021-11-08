@@ -21,10 +21,12 @@ Plug 'gaborvecsei/cryptoprice.nvim'
 
 You'll need to setup what coins you would like to see and in which currency.
 
-- `base_currency`: Use `eur` or `usd`
+- `base_currency`: E.g.: `eur` or `usd`
+    - Here you can see all the valid currencies [api.coingecko.com/api/v3/simple/supported_vs_currencies](https://api.coingecko.com/api/v3/simple/supported_vs_currencies)
 - `crypto_list`: This is a list with the id of the coin on CoinGecko
     - Check the available ids here: [api.coingecko.com/v3/coins/list](https://api.coingecko.com/api/v3/coins/list)
-    - e.g. `["bitcoin", "ethereum"]`
+    - Usually this is the name of the coin instead of their symbol
+    - e.g. `["bitcoin", "ethereum", "shiba-inu"]`
 
 ### vimscript
 
