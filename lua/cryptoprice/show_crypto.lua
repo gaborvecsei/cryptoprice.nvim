@@ -4,8 +4,8 @@ local vim = vim
 
 local M = {}
 
-local buf = nil
-local win = nil
+Crypto_buf = nil
+Crypto_win_id = nil
 
 function M.get_crypto_price(base_currency, coin_name)
     base_currency = base_currency or "usd"
@@ -29,95 +29,75 @@ function M.get_crypto_price(base_currency, coin_name)
     return current_price
 end
 
-local function center(str)
-  local width = vim.api.nvim_win_get_width(0)
-  local shift = math.floor(width / 2) - math.floor(string.len(str) / 2)
-  return string.rep(' ', shift) .. str
+local function create_window(width, height)
+    local width = width or 60
+    local height = height or 10
+    local borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" }
+    local bufnr = vim.api.nvim_create_buf(false, false)
+
+    local win_id, win = popup.create(bufnr, {
+        title = "Crypto Prices",
+        highlight = "CryptoPriceWindow",
+        line = math.floor(((vim.o.lines - height) / 2) - 1),
+        col = math.floor((vim.o.columns - width) / 2),
+        minwidth = width,
+        minheight = height,
+        borderchars = borderchars,
+    })
+
+    vim.api.nvim_win_set_option(
+        win.border.win_id,
+        "winhl",
+        "Normal:CryptoPriceBorder"
+    )
+
+    return {
+        bufnr = bufnr,
+        win_id = win_id,
+    }
 end
 
-local function open_window()
-  buf = vim.api.nvim_create_buf(false, true)
-  local border_buf = vim.api.nvim_create_buf(false, true)
-
-  vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-  vim.api.nvim_buf_set_option(buf, 'filetype', 'cryptoprice')
-
-  local width = vim.api.nvim_get_option("columns")
-  local height = vim.api.nvim_get_option("lines")
-
-  local win_height = math.ceil(height * 0.5 - 4)
-  local win_width = math.ceil(width * 0.3)
-  local row = math.ceil((height - win_height) / 2 - 1)
-  local col = math.ceil((width - win_width) / 2)
-
-  local border_opts = {
-    style = "minimal",
-    relative = "editor",
-    width = win_width + 2,
-    height = win_height + 2,
-    row = row - 1,
-    col = col - 1
-  }
-
-  local opts = {
-    style = "minimal",
-    relative = "editor",
-    width = win_width,
-    height = win_height,
-    row = row,
-    col = col
-  }
-
-  local border_lines = { '╔' .. string.rep('═', win_width) .. '╗' }
-  local middle_line = '║' .. string.rep(' ', win_width) .. '║'
-  for i=1, win_height do
-    table.insert(border_lines, middle_line)
-  end
-  table.insert(border_lines, '╚' .. string.rep('═', win_width) .. '╝')
-  vim.api.nvim_buf_set_lines(border_buf, 0, -1, false, border_lines)
-
-  local border_win = vim.api.nvim_open_win(border_buf, true, border_opts)
-  win = vim.api.nvim_open_win(buf, true, opts)
-  vim.api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "'..border_buf)
-
-  vim.api.nvim_win_set_option(win, 'cursorline', true)
-
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { center('Crypto Prices'), '', ''})
-  vim.api.nvim_buf_add_highlight(buf, -1, 'CryptoPricedHeader', 0, 0, -1)
+local function close_window()
+    vim.api.nvim_win_close(Crypto_win_id, true)
+    Crypto_win_id = nil
+    Crypto_buf = nil
 end
 
-local function refresh_prices()
-  vim.api.nvim_buf_set_option(buf, 'modifiable', true)
+function M.toggle_price_window()
+    -- If it is already existing, then close it
+    if Crypto_win_id ~= nil and vim.api.nvim_win_is_valid(Crypto_win_id) then
+        close_window()
+        return
+    end
 
-  vim.api.nvim_buf_set_lines(buf, 1, 2, false, {center("Crypto Prices")})
+    local win_info = create_window()
+    Crypto_win_id = win_info.win_id
+    Crypto_buf = win_info.bufnr
 
-  local base_currency = "usd"
-  local cryptos = {"bitcoin", "ethereum", "tezos"}
+    local base_currency = "usd"
+    local cryptos = {"bitcoin", "ethereum", "tezos"}
 
-  for k,v in ipairs(cryptos) do
-      local price = M.get_crypto_price(base_currency, v)
-      local text = string.upper(v) .. " is " .. tostring(price) .. " " .. string.upper(base_currency)
-      vim.api.nvim_buf_set_lines(buf, 3+k+1, -1, false, {center(text)})
-  end
+    local contents = {}
+    for k, v in ipairs(cryptos) do
+        local price = M.get_crypto_price(base_currency, v)
+        local text = string.upper(v) .. " is " .. tostring(price) .. " " .. string.upper(base_currency)
+        contents[k] = text
+    end
 
-  vim.api.nvim_buf_add_highlight(buf, -1, 'CryptoPriceSubHeader', 1, 0, -1)
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_name(Crypto_buf, "cryptoprice-menu")
+    vim.api.nvim_buf_set_lines(Crypto_buf, 0, #contents, false, contents)
+    vim.api.nvim_buf_set_option(Crypto_buf, "filetype", "cryptoprice")
+    vim.api.nvim_buf_set_option(Crypto_buf, "buftype", "acwrite")
+    vim.api.nvim_buf_set_option(Crypto_buf, "bufhidden", "delete")
+
+    -- TODO: this is not working...
+    -- vim.api.nvim_buf_set_keymap(
+    --     Crypto_buf,
+    --     "n",
+    --     "q",
+    --     ":lua require('cryptoprice.show_crypto').toggle_price_window()<CR>",
+    --     { silent = true }
+    -- )
 end
-
-function M.close_window()
-  vim.api.nvim_win_close(win, true)
-end
-
-function M.show_price()
-    open_window()
-    -- TODO: this needs fiz, not working - not closing the window, call :close
-    -- vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':lua require("cryptoprice").close_window()<cr>', {
-    --     nowait = true, noremap = true, silent = true
-    -- })
-    refresh_prices()
-    vim.api.nvim_win_set_cursor(win, {4, 0})
-end
-
-M.show_price()
 
 return M
