@@ -9,7 +9,10 @@ local M = {}
 Crypto_buf = nil
 Crypto_win_id = nil
 
+
 local function is_api_reachable()
+    -- Healthcheck if the API is alive and well
+
     local req_url = "https://api.coingecko.com/api/v3/ping"
 
     local response = curl.request{
@@ -25,12 +28,14 @@ local function is_api_reachable()
     return false
 end
 
-local function get_crypto_price(base_currency, coin_name)
-    -- Returns the price of the defined crypto in the base currency
+local function get_crypto_prices(base_currency, coin_names)
+    -- Returns the price of the defined cryptos in the base currency
 
+    -- Prepare the request URL
     base_currency = base_currency or "usd"
-    coin_name = coin_name or "bitcoin"
-    local req_url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=" .. base_currency .. "&ids=" .. coin_name
+    coin_names = coin_names or {"bitcoin", "ethereum"}
+    coin_names = table.concat(coin_names, "%2C")
+    local req_url = "https://api.coingecko.com/api/v3/simple/price?ids=" .. coin_names .. "&vs_currencies=" .. base_currency
 
     local response = curl.request{
         url=req_url,
@@ -39,13 +44,18 @@ local function get_crypto_price(base_currency, coin_name)
     }
 
     if response.status ~= 200 then
-       error("Could not make request for " .. coin_name .. " status code is " .. response.status)
+       error("Could not make request for " .. coin_names .. " status code is " .. response.status)
     end
 
+    -- Simplify the response to a table where the key is the coin name and the value is the price
     local resp_decoded = vim.fn.json_decode(response.body)
-    local current_price = resp_decoded[1].current_price
+    local prices_table = {}
+    for k, v in pairs(resp_decoded) do
+        prices_table[k] = v[base_currency]
+    end
 
-    return current_price
+    -- returns a table, e.g. {bitcoin=69, ethereum=420}
+    return prices_table
 end
 
 local function create_window(width, height)
@@ -82,6 +92,24 @@ local function close_window()
     Crypto_buf = nil
 end
 
+local function create_price_data()
+    -- Gather prices of the defined coins and create the messages which we will show on the created popup window
+
+    local contents = {}
+    local req_status, prices = pcall(get_crypto_prices, vim.g.cryptoprice_base_currency, vim.g.cryptoprice_crypto_list)
+
+    if req_status then
+        local i = 1
+        for k, v in pairs(prices) do
+            contents[i] = string.upper(k) .. " is " .. tostring(v) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
+            i = i + 1
+        end
+    else
+        contents[1] = "[ERROR] No prices found"
+    end
+    return contents
+end
+
 function M.toggle_price_window()
     -- If the window already exists, then close it
     if Crypto_win_id ~= nil and vim.api.nvim_win_is_valid(Crypto_win_id) then
@@ -109,31 +137,16 @@ function M.toggle_price_window()
         return
     end
 
-    -- Gather prices of the defined coins and create the messages which we will show on the created popup window
-    local contents = {}
-    for k, v in ipairs(vim.g.cryptoprice_crypto_list) do
-        local req_status, price = pcall(get_crypto_price, vim.g.cryptoprice_base_currency, v)
-
-        local text = ""
-        if req_status then
-            text = string.upper(v) .. " is " .. tostring(price) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
-        else
-            text = "[ERROR] No price found for " .. string.upper(v)
-        end
-
-        contents[k] = text
-    end
-
+    local contents = create_price_data()
     set_buffer_contents(contents)
 
-    -- TODO: this is not working...
-    -- vim.api.nvim_buf_set_keymap(
-    --     Crypto_buf,
-    --     "n",
-    --     "q",
-    --     ":lua require('cryptoprice').toggle_price_window()<CR>",
-    --     { silent = true }
-    -- )
+    vim.api.nvim_buf_set_keymap(
+        Crypto_buf,
+        "n",
+        "q",
+        ":lua require('cryptoprice.show_crypto').toggle_price_window()<CR>",
+        { silent = true }
+    )
 end
 
 return M
