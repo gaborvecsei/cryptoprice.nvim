@@ -1,13 +1,17 @@
 local curl = require("plenary.curl")
 local popup = require("plenary.popup")
+-- Just to supress editor errors...
 local vim = vim
 
 local M = {}
 
+-- Popup window
 Crypto_buf = nil
 Crypto_win_id = nil
 
-function M.get_crypto_price(base_currency, coin_name)
+local function get_crypto_price(base_currency, coin_name)
+    -- Returns the price of the defined crypto in the base currency
+
     base_currency = base_currency or "usd"
     coin_name = coin_name or "bitcoin"
     local req_url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=" .. base_currency .. "&ids=" .. coin_name
@@ -19,13 +23,12 @@ function M.get_crypto_price(base_currency, coin_name)
     }
 
     if response.status ~= 200 then
-       error("Could not make request")
+       error("Could not make request, status code is " .. response.status)
     end
 
     local resp_decoded = vim.fn.json_decode(response.body)
     local current_price = resp_decoded[1].current_price
 
-    -- print("Price of 1 " .. string.upper(coin_name) .. " is: " .. tostring(current_price) .. " " .. string.upper(base_currency))
     return current_price
 end
 
@@ -70,17 +73,19 @@ function M.toggle_price_window()
         return
     end
 
+    -- Create the window, and assign the global variables, so we can use later
     local win_info = create_window()
     Crypto_win_id = win_info.win_id
     Crypto_buf = win_info.bufnr
 
-    local base_currency = "usd"
-    local cryptos = {"bitcoin", "ethereum", "tezos"}
+    print(vim.g.cryptoprice_crypto_list)
+    print(type(vim.g.cryptoprice_crypto_list))
 
     local contents = {}
-    for k, v in ipairs(cryptos) do
-        local price = M.get_crypto_price(base_currency, v)
-        local text = string.upper(v) .. " is " .. tostring(price) .. " " .. string.upper(base_currency)
+    for k, v in ipairs(vim.g.cryptoprice_crypto_list) do
+        -- TODO: error handling
+        local price = get_crypto_price(vim.g.cryptoprice_base_currency, v)
+        local text = string.upper(v) .. " is " .. tostring(price) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
         contents[k] = text
     end
 
@@ -95,7 +100,7 @@ function M.toggle_price_window()
     --     Crypto_buf,
     --     "n",
     --     "q",
-    --     ":lua require('cryptoprice.show_crypto').toggle_price_window()<CR>",
+    --     ":lua require('cryptoprice').toggle_price_window()<CR>",
     --     { silent = true }
     -- )
 end
