@@ -78,9 +78,6 @@ function M.toggle_price_window()
     Crypto_win_id = win_info.win_id
     Crypto_buf = win_info.bufnr
 
-    print(vim.g.cryptoprice_crypto_list)
-    print(type(vim.g.cryptoprice_crypto_list))
-
     local contents = {}
     for k, v in ipairs(vim.g.cryptoprice_crypto_list) do
         -- TODO: error handling
