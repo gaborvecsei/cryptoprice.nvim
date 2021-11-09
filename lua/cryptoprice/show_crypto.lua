@@ -149,7 +149,7 @@ function M.toggle_price_window()
     -- Create the window, and assign the global variables, so we can use later
     -- TODO: global variable to modify the width, height? (we should use that variable in the show_content fn as well
     -- when adding the help line at the end
-    local win_info = create_window()
+    local win_info = create_window(vim.g.cryptoprice_window_width, vim.g.cryptoprice_window_height)
     Crypto_win_id = win_info.win_id
     Crypto_buf = win_info.bufnr
 

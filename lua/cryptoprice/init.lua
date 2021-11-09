@@ -20,6 +20,8 @@ function M.setup(opts)
 
     set_default("crypto_list", {"bitcoin", "ethereum", "tezos", "dogecoin"})
     set_default("base_currency", "usd")
+    set_default("window_width", 60)
+    set_default("window_height", 10)
 end
 
 -- Default config setup
