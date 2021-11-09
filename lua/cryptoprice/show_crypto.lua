@@ -1,5 +1,6 @@
 local curl = require("plenary.curl")
 local popup = require("plenary.popup")
+local reqs = require("cryptoprice.reqs")
 -- Just to suppress editor errors
 local vim = vim
 
@@ -10,47 +11,19 @@ Crypto_buf = nil
 Crypto_win_id = nil
 
 
-local function is_api_reachable()
-    -- Healthcheck if the API is alive and well
-
-    local req_url = "https://api.coingecko.com/api/v3/ping"
-
-    local response = curl.request{
-        url=req_url,
-        method="get",
-        accept="application/json"
-    }
-
-    if response.status == 200 then
-        return true
-    end
-
-    return false
-end
-
 local function get_crypto_prices(base_currency, coin_names)
     -- Returns the price of the defined cryptos in the base currency
 
-    -- Prepare the request URL
-    base_currency = base_currency or "usd"
-    coin_names = coin_names or {"bitcoin", "ethereum"}
     coin_names = table.concat(coin_names, "%2C")
-    local req_url = "https://api.coingecko.com/api/v3/simple/price?ids=" .. coin_names .. "&vs_currencies=" .. base_currency
+    local resp = reqs.get_prices(coin_names, base_currency)
 
-    local response = curl.request{
-        url=req_url,
-        method="get",
-        accept="application/json"
-    }
-
-    if response.status ~= 200 then
-       error("Could not make request for " .. coin_names .. " status code is " .. response.status)
+    if not resp.success then
+       error("Could not make request for " .. coin_names)
     end
 
     -- Simplify the response to a table where the key is the coin name and the value is the price
-    local resp_decoded = vim.fn.json_decode(response.body)
     local prices_table = {}
-    for k, v in pairs(resp_decoded) do
+    for k, v in pairs(resp.json_table) do
         prices_table[k] = v[base_currency]
     end
 
@@ -154,7 +127,7 @@ function M.toggle_price_window()
     Crypto_buf = win_info.bufnr
 
     -- Check if the API is reachable
-    if not is_api_reachable() then
+    if not reqs.ping_api() then
         set_buffer_contents(Crypto_buf, {"[ERROR] the API is not reachable", "Check your internet connection"})
         return
     end

@@ -1,3 +1,5 @@
+local reqs = require("cryptoprice.reqs")
+
 local M = {}
 
 function M.reload()
@@ -9,23 +11,13 @@ function M.find_coin_id(symbol_to_find)
     -- what is the associated ID to a known symbol
     -- e.g. :lua require("cryptoprice.dev").find_coin_id("BTC") --> bitcoin
 
-    local curl = require("plenary.curl")
-
-    local req_url = "https://api.coingecko.com/api/v3/coins/list"
-
-    local response = curl.request{
-        url=req_url,
-        method="get",
-        accept="application/json"
-    }
-
-    if response.status ~= 200 then
-        print("Could not get coin IDs")
+    local resp = reqs.get_coin_list()
+    if not resp.success then
+        print("Could not get coin IDs - check you internet connection")
     end
 
     local symbol_and_id_table = {}
-    local resp_decoded = vim.fn.json_decode(response.body)
-    for k, v in ipairs(resp_decoded) do
+    for k, v in ipairs(resp.json_table) do
         local i, j = string.find(v.symbol, string.lower(symbol_to_find))
         if i ~= nil and #v.symbol == #symbol_to_find then
             symbol_and_id_table[v.symbol] = v.id
