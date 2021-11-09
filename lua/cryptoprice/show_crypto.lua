@@ -1,4 +1,3 @@
-local curl = require("plenary.curl")
 local popup = require("plenary.popup")
 local reqs = require("cryptoprice.reqs")
 -- Just to suppress editor errors
