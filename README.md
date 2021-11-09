@@ -1,12 +1,14 @@
 # Crypto Price NeoVim
 
-There are 100000+ ways to check the price of your favourite coins. Now I made a `nvim` plugin with which you can do the
-same from your `nvim` session.
+There are a [million](https://upload.wikimedia.org/wikipedia/en/1/16/Drevil_million_dollars.jpg) ways to check the price of your favourite coins. Now I made a `nvim` plugin with which you can do the
+same from your session.
 
-> Just imagine... you are in the flow, coding your time away. You are typing a new variable name
+> Just imagine...:thinking: you are in the flow, coding your time away. You are typing a new variable name
 which resembles to one of your favourite coins and you remember... you did not check the crypto price for more than 
-5 minutes. Before this plugin you would have panicked, but now you just call `:lua require("cryptoprice").toggle()`
-with your favourite key binding and calmness settles, you can continue your work.
+5 minutes :open_mouth: :scream:. Before this plugin you would have panicked, but now you just call `:lua require("cryptoprice").toggle()`
+with your favourite key binding and calmness settles :heart_eyes:, you can continue your work. :relieved:
+
+![CryptoPrice](art/cryptoprice.png)
 
 (I made this just to learn about `nvim` and `lua` a little bit - nothing serious)
 
