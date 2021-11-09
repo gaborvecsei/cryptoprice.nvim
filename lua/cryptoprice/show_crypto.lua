@@ -31,6 +31,8 @@ local function get_crypto_prices(base_currency, coin_names)
 end
 
 local function create_window(width, height)
+    -- Creates a popup window where we will show the prices
+
     width = width or 60
     height = height or 10
     local borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" }
@@ -59,6 +61,8 @@ local function create_window(width, height)
 end
 
 local function close_window()
+    -- Close the popup window
+
     vim.api.nvim_win_close(Crypto_win_id, true)
     Crypto_win_id = nil
     Crypto_buf = nil
@@ -66,6 +70,7 @@ end
 
 local function set_buffer_contents(buf, contents)
     -- Helper function to set the contents of the window buffer
+
     vim.api.nvim_buf_set_name(buf, "cryptoprice-menu")
 
     -- TODO: offsetting the help message from the last "real" line - I am sure there is a better way to do this
@@ -89,10 +94,9 @@ local function create_price_data()
     local req_status, prices = pcall(get_crypto_prices, vim.g.cryptoprice_base_currency, vim.g.cryptoprice_crypto_list)
 
     if req_status then
-        local i = 1
-        for k, v in pairs(prices) do
-            contents[i] = "- 1 " .. string.upper(k) .. " is " .. tostring(v) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
-            i = i + 1
+        -- Create the message line by line in the defined crypto order
+        for k, v in ipairs(vim.g.cryptoprice_crypto_list) do
+            contents[#contents+1] = "- 1 " .. string.upper(v) .. " is " .. tostring(prices[v]) .. " " .. string.upper(vim.g.cryptoprice_base_currency)
         end
     else
         contents[1] = "[ERROR] No prices found"
@@ -112,15 +116,15 @@ function M.refresh_prices()
 end
 
 function M.toggle_price_window()
-    -- If the window already exists, then close it
+    -- Creates the popup window, then draws the crypto price content in the buffer
+
     if Crypto_win_id ~= nil and vim.api.nvim_win_is_valid(Crypto_win_id) then
+        -- If the window already exists, then close it
         close_window()
         return
     end
 
     -- Create the window, and assign the global variables, so we can use later
-    -- TODO: global variable to modify the width, height? (we should use that variable in the show_content fn as well
-    -- when adding the help line at the end
     local win_info = create_window(vim.g.cryptoprice_window_width, vim.g.cryptoprice_window_height)
     Crypto_win_id = win_info.win_id
     Crypto_buf = win_info.bufnr
@@ -152,3 +156,4 @@ function M.toggle_price_window()
 end
 
 return M
+
